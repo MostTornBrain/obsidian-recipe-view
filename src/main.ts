@@ -10,6 +10,7 @@ interface RecipeViewPluginSettings {
 	renderUnicodeFractions: boolean;
 	singleColumnMaxWidth: number;
 	showBulletsTwoColumn: boolean;
+	hiddenTags: Array<string>;
 }
 
 const DEFAULT_SETTINGS: RecipeViewPluginSettings = {
@@ -18,6 +19,7 @@ const DEFAULT_SETTINGS: RecipeViewPluginSettings = {
 	renderUnicodeFractions: true,
 	singleColumnMaxWidth: 600,
 	showBulletsTwoColumn: false,
+	hiddenTags: [],
 }
 
 export default class RecipeViewPlugin extends Plugin {
@@ -148,6 +150,16 @@ class RecipeViewSettingsTab extends PluginSettingTab {
 					this.plugin.settings!.renderUnicodeFractions = value;
 					await this.plugin.saveSettings();
 				}));
+
+		new Setting(containerEl)
+		.setName("Hidden Tags")
+		.setDesc("Tags that will be hidden from the recipe card.")
+		.addTextArea(text => text
+			.setValue(this.plugin.settings!.hiddenTags.join("\n"))
+			.onChange(async (value) => {
+			this.plugin.settings!.hiddenTags = value.split("\n");
+			await this.plugin.saveSettings();
+		}));
 
 		new Setting(containerEl)
 			.setName('Display ingredients in two-column view with bullets')
