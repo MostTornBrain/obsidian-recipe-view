@@ -2,7 +2,7 @@ import RecipeViewPlugin from "./main";
 import RecipeLeaf from "./RecipeLeaf.svelte";
 import CheckableIngredientList from "./CheckableIngredientList.svelte";
 import SelectableStepList from "./SelectableStepList.svelte";
-import { Component, MarkdownRenderer } from "obsidian";
+import { App, Component, MarkdownRenderer } from "obsidian";
 import store from "./store"
 import { Writable, get, writable } from "svelte/store"
 import Fraction from "fraction.js";
@@ -109,6 +109,33 @@ function injectQuantities(parsedRecipe: ParsedRecipe) {
     })
 }
 
+export function preprocessMarkdown(text: string, hiddenTags: string[]): string {
+    // Create a regex pattern to match the hidden tags
+    // The regex will match lines that contain only the hidden tags
+    // and ignore any other content.
+    const tagRegex = new RegExp(`^\\s*(${hiddenTags.map(tag => `#${tag}`).join("|")})\\s*$`, "i");
+    
+    // Filter out lines that match the tag regex
+    const filteredLines = text.split("\n").filter((line) => !tagRegex.test(line));
+
+    return filteredLines.join("\n");
+}
+
+export function renderFilteredMarkdown(
+    app: App,
+    text: string,
+    container: HTMLElement,
+    path: string,
+    view: Component,
+    hiddenTags: string[] = []
+) {
+    // Preprocess the Markdown to filter out unwanted tags
+    const filteredText = preprocessMarkdown(text, hiddenTags);
+
+    // Render the filtered Markdown
+    MarkdownRenderer.render(app, filteredText, container, path, view);
+}
+
 export function parseRecipeMarkdown(
     plugin: RecipeViewPlugin, text: string, path: string, component: Component
 ) {
@@ -130,8 +157,7 @@ export function parseRecipeMarkdown(
         qtyScaleStore: writable(new Fraction(1)),
     };
 
-    MarkdownRenderer.render(plugin.app, text, result.renderedMarkdownParent, path, component);
-
+    renderFilteredMarkdown(plugin.app, text, result.renderedMarkdownParent, path, component, plugin.settings.hiddenTags);
 
     const radioName = `selectable-steps-${get(store.counter)}`;
     store.counter.update((n) => n + 1);
@@ -211,9 +237,39 @@ export function parseRecipeMarkdown(
             item.nodeName == "UL" &&
             (currentColumn == "sideComponents" || !result.sections[currentSection].containsHeader)
         ) {
+            // We need to parse the original markdown to determine the line number
+            // where the list starts, so we can set the origIndex correctly for the list.
+            // This is because the rendered markdown doesn't have the same line numbers
+            // as the original markdown.
+            // Since there can be multiple lists in the markdown file, we need to find the right list based
+            // on content.  So we'll need to do some pattern matching to find the right list. 
+
+            // Parse the original Markdown to determine the line number where the list starts
+            const markdownLines = text.split("\n"); // Split the Markdown into lines
+            const listItems = Array.from(item.querySelectorAll("li")); // Get all list items in the rendered list
+
+            // Find the starting line of the list in the Markdown
+            let listStartLine = -1;
+            for (let lineIndex = 0; lineIndex < markdownLines.length; lineIndex++) {
+                const line = markdownLines[lineIndex].trim();
+
+                // Check if the line matches the first list item
+                if (line.startsWith("- ") || line.startsWith("* ") || line.startsWith("+ ")) {
+                    const listItemText = listItems[0]?.textContent?.trim() || "";
+                    if (line.includes(listItemText)) {
+                        listStartLine = lineIndex;
+                        break;
+                    }
+                }
+            }
+
+            // If we found the starting line, use it as the origIndex
+            const origIndex = listStartLine !== -1 ? listStartLine : i;
+
+
             result.sections[currentSection]["sideComponents"].push({
                 type: CheckableIngredientList,
-                props: { list: item, bullets: plugin.settings.showBulletsTwoColumn },
+                props: { app: plugin.app, list: item, bullets: plugin.settings.showBulletsTwoColumn, origIndex:origIndex},
                 origIndex: i,
             });
             continue;

@@ -1,8 +1,12 @@
 <script lang="ts">
 	import RecipeLeaf from "./RecipeLeaf.svelte";
 
+	import { App } from "obsidian";
+
+	export let app: App; // Pass the Obsidian app instance to the component
 	export let list: HTMLUListElement;
 	export let bullets: boolean;
+    export let origIndex: number; // Add origIndex as a prop so we can pass it to RecipeLeaf
 
 	function isChecked(index: number): boolean {
 		return (
@@ -39,7 +43,7 @@
 						on:change={(e) => changeChecked(i, e)}
 					/>
 					<div class="leaf">
-						<RecipeLeaf childNodesOf={itemAt(i)} asTag="div" />
+						<RecipeLeaf childNodesOf={itemAt(i)} asTag="div" app={app} lineIndex={origIndex + i} />
 					</div>
 				</label>
 			</li>

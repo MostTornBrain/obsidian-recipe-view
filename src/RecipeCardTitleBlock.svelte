@@ -1,19 +1,23 @@
 <script lang="ts">
-	import { App, ColorComponent, MarkdownRenderer, TFile } from "obsidian";
 	import { RecipeView } from "./recipe-view";
-	import { plugin } from "./store";
-	import { mainModule } from "process";
 	import RecipeViewPlugin from "./main";
+	import { renderFilteredMarkdown } from "./parsing";
 
 	export let thumbnailPath: string | undefined;
 	export let title: string;
 	export let frontmatter: object;
 	export let singleColumn: boolean;
-	export let app: RecipeViewPlugin;
+	export let plugin: RecipeViewPlugin;
 	export let file: TFile;
 	export let view: RecipeView;
 
 	function formatFrontmatterValue(key: string, value: any) {
+
+		// Hide any frontmatter tags that are in the hiddenTags setting
+		if (plugin.settings.hiddenTags.contains(key)) {
+			return undefined;
+		}
+
 		// See if it's a URL
 		try {
 			let url = new URL(value);
@@ -42,17 +46,14 @@
 		}
 
 		if (typeof value === "string" || value instanceof String) {
-			if (app.settings.hiddenTags.contains(key)) {
-				return undefined;
-			}
-
 			const markdownContainer = createSpan();
-			MarkdownRenderer.render(
-				app.app,
+			renderFilteredMarkdown(
+				plugin.app,
 				value.toString(),
 				markdownContainer,
 				file.path,
 				view,
+				plugin.settings.hiddenTags
 			);
 			// Will just return what's in the first paragraph, so only really works with
 			// a single line – but imo that's fine

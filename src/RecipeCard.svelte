@@ -156,7 +156,7 @@
 				{frontmatter}
 				thumbnailPath={parsedRecipe?.thumbnailPath}
 				singleColumn={true}
-				app={plugin}
+				plugin={plugin}
 				{file}
 				{view}
 			/>
@@ -178,7 +178,7 @@
 				{frontmatter}
 				thumbnailPath={parsedRecipe?.thumbnailPath}
 				singleColumn={false}
-				app={plugin}
+				plugin={plugin}
 				{file}
 				{view}
 			/>
@@ -197,7 +197,7 @@
 				{frontmatter}
 				thumbnailPath={parsedRecipe?.thumbnailPath}
 				singleColumn={false}
-				app={plugin}
+				plugin={plugin}
 				{file}
 				{view}
 			/>
